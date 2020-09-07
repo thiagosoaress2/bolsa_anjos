@@ -1,10 +1,12 @@
 import 'package:bolsa_anjos/classes/user_class.dart';
 import 'package:bolsa_anjos/drawer/menu_drawer.dart';
 import 'package:bolsa_anjos/logins_pages/auth_rotines.dart';
-import 'package:bolsa_anjos/models/user_models.dart';
+import 'package:bolsa_anjos/mobs/mob_auth.dart';
+import 'package:bolsa_anjos/models/user_model.dart';
 import 'package:bolsa_anjos/pages/reg_user.dart';
 import 'package:bolsa_anjos/widgets/widgets_constructor.dart';
 import 'package:flutter/material.dart';
+import 'package:mobx/mobx.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -13,13 +15,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
 
-  @override
-  void initState() {
-    super.initState();
-    UserModels().loadUserClass();
-    AuthRotines().isUserLoggedIn();
-
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,4 +51,12 @@ class _HomePageState extends State<HomePage> {
         builder: (context) => RegUser()));
   }
 
+  @override
+  void initState() {
+    super.initState();
+
+    AuthRotines().initAuthRotines();
+    AuthRotines().isLoggedIn();
+
+  }
 }

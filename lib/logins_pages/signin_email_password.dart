@@ -1,7 +1,6 @@
 import 'package:bolsa_anjos/classes/user_class.dart';
 import 'package:bolsa_anjos/logins_pages/auth_rotines.dart';
 import 'package:bolsa_anjos/mobs/mob_auth.dart';
-import 'package:bolsa_anjos/models/user_models.dart';
 import 'package:bolsa_anjos/pages/home_page.dart';
 import 'package:bolsa_anjos/pages/reg_user.dart';
 import 'package:bolsa_anjos/widgets/widgets_constructor.dart';
@@ -125,7 +124,21 @@ class _SignInWithEmailPassowrdState extends State<SignInWithEmailPassowrd> {
                       child: WidgetsConstructor().makeText("Esqueceu a senha?", Colors.blue[300], 18.0, 10.0, 30.0, "no"),
                       onTap: (){
                         setState(() {
-                          _page = "recover";
+                          //_page = "recover";
+                          if(emailController.text.isNotEmpty){
+                            if(emailController.text.contains("@") && emailController.text.contains(".")){
+                              AuthRotines().recoverPass(emailController.text);
+                              //AuthRotines().recoverPass(emailController.text);
+                              _displaySnackBar(context, "Enviamos um e-mail. Verifique e siga as instruções para recuperar a senha.");
+
+                            } else {
+                              _displaySnackBar(context, "Ops, tem algo errado no e-mail informado.");
+                            }
+
+                          } else {
+                            _displaySnackBar(context, "Informe um e-mail para reenviarmos sua senha.");
+                          }
+
                         });
                       },
                     ),
@@ -140,7 +153,8 @@ class _SignInWithEmailPassowrdState extends State<SignInWithEmailPassowrd> {
                     onPressed: () {
                       if (_formKey.currentState.validate()) {
 
-                        signIn();
+                        //signIn();
+                        AuthRotines().signIn(emailController.text, passwordController.text, () {_onSucess(); }, () {_onFailure(); });
 
                       }
                     },
@@ -154,25 +168,6 @@ class _SignInWithEmailPassowrdState extends State<SignInWithEmailPassowrd> {
         ),
       ],
     );
-  }
-
-  void signIn() async {
-    _mobAuth.setLoading(true);
-
-    firebaseAuth.signInWithEmailAndPassword(email: emailController.text, password: passwordController.text).then((user) async {
-      AuthRotines().firebaseUser = user as FirebaseUser;
-      //load user info
-      _loadUserData();
-      _mobAuth.setLoading(false);
-
-      Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomePage())
-      );
-
-    }
-    );
-
   }
 
   Widget createUserScreen (){
@@ -267,7 +262,14 @@ class _SignInWithEmailPassowrdState extends State<SignInWithEmailPassowrd> {
                   _displaySnackBar(context, "A senha deve conter pelo menos seis dígitos");
                 } else {
                   if (passwordController.text == passwordConfirmationController.text){
-                    register();
+                    //register(() {_onSucess();}, () {_onFailure();});
+
+                    Map<String, dynamic> userData = {
+                      "name" : nameController.text,
+                      "email" : emailController.text,
+                    };
+                    AuthRotines().signUp(userData, passwordController.text, () {_onSucess();}, () {_onFailure();});
+
                   } else {
                     _displaySnackBar(context, "As senhas informadas não são iguais");
                   }
@@ -282,7 +284,51 @@ class _SignInWithEmailPassowrdState extends State<SignInWithEmailPassowrd> {
     );
   }
 
-  void register() async {
+  void _onSucess(){
+    _scaffoldKey.currentState.showSnackBar(
+        SnackBar(content: Text(_page=="create" ? "Usuário criado com sucesso!" : "Você está logado."), backgroundColor: Theme.of(context).primaryColor, duration: Duration(seconds: 3),)
+    );
+    Future.delayed(Duration(seconds: 3)).then((_){
+      Navigator.of(context).pop();
+
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage())
+      );
+
+    });
+
+  }
+
+  void _onFailure(){
+    _scaffoldKey.currentState.showSnackBar(
+        SnackBar(content: Text(_page=="login" ? "Ocorreu um erro na identificação." : "O usuário não foi criado. Um erro ocorreu."), backgroundColor: Colors.red, duration: Duration(seconds: 5),)
+    );
+
+  }
+
+  /*
+  void signIn() async {
+    _mobAuth.setLoading(true);
+
+    firebaseAuth.signInWithEmailAndPassword(email: emailController.text, password: passwordController.text).then((user) async {
+      AuthRotines().firebaseUser = user as FirebaseUser;
+      //load user info
+      //_loadUserData();
+      _mobAuth.setLoading(false);
+      AuthRotines().isUserLoggedIn(); //aqui carrega os dados
+
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage())
+      );
+
+    }
+    );
+
+  }
+
+  void register(@required VoidCallback onSuccess, @required VoidCallback onFailure) async {
     setState(() {
       _mobAuth.setLoading(true);
     });
@@ -318,32 +364,24 @@ class _SignInWithEmailPassowrdState extends State<SignInWithEmailPassowrd> {
     });
   }
 
-  Future<Null> _loadUserData() async {
-    if (AuthRotines().firebaseUser == null){
+  void _onSucess(){
+    _scaffoldKey.currentState.showSnackBar(
+        SnackBar(content: Text("Usuário criado com sucesso!"), backgroundColor: Theme.of(context).primaryColor, duration: Duration(seconds: 3),)
+    );
+    Future.delayed(Duration(seconds: 3)).then((_){
+      Navigator.of(context).pop();
 
-        AuthRotines().firebaseUser = await AuthRotines().auth.currentUser();
-        if(AuthRotines().firebaseUser != null){
-          if(UserModels().user.name == null){
-            DocumentSnapshot docUser = await Firestore.instance.collection("users").document(AuthRotines().firebaseUser.uid).get();
-            UserModels().user.name = docUser["name"];
-            UserModels().user.isLoggedIn = true;
-            UserModels().user.email = docUser["email"];
-            UserModels().user.hasIdeas = docUser["hasIdeas"];
-            UserModels().user.hasInvestments = docUser["hasInvestments"];
-          }
-        }
-    } else {
-      if(UserModels().user.name == "no"){
-        DocumentSnapshot docUser = await Firestore.instance.collection("users").document(AuthRotines().firebaseUser.uid).get();
-        UserModels().user.name = docUser["name"];
-        UserModels().user.isLoggedIn = true;
-        UserModels().user.email = docUser["email"];
-        UserModels().user.hasIdeas = docUser["hasIdeas"];
-        UserModels().user.hasInvestments = docUser["hasInvestments"];
-      }
-    }
+    });
+  }
+
+  void _onFailure(){
+    _scaffoldKey.currentState.showSnackBar(
+        SnackBar(content: Text("O usuário não foi criado. Um erro ocorreu"), backgroundColor: Colors.red, duration: Duration(seconds: 5),)
+    );
 
   }
+
+   */
 }
 
 

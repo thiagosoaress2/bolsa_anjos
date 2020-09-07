@@ -1,48 +1,56 @@
-import 'package:bolsa_anjos/models/user_models.dart';
+import 'package:bolsa_anjos/logins_pages/auth_rotines.dart';
+import 'package:bolsa_anjos/mobs/mob_auth.dart';
+import 'package:bolsa_anjos/models/user_model.dart';
 import 'package:bolsa_anjos/pages/login_page.dart';
 import 'package:bolsa_anjos/pages/reg_user.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 
 class MenuDrawer extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding:EdgeInsets.only(top: 16.0),
-        children: [
-          DrawerHeader(  //cabeçalho
-            child: Align(
-              alignment: Alignment.bottomLeft,
-              child: Text(UserModels().user == null || UserModels().user.email == "no" ? "Você ainda não se identificou" : UserModels().user.email, style: TextStyle(color: Colors.white)),
+    return Observer(
+      builder: (_) =>
+          Drawer(
+        child: ListView(
+          padding:EdgeInsets.only(top: 16.0),
+          children: [
+            DrawerHeader(  //cabeçalho
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                //child: Text(UserModels().user == null || UserModels().user.email == "no" ? "Você ainda não se identificou" : UserModels().user.email, style: TextStyle(color: Colors.white)),
+                child: Text(AuthRotines().getEmail == null ? "Você ainda não se identificou" : AuthRotines().getEmail.toString()),
+              ),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
             ),
-            decoration: BoxDecoration(
-              color: Colors.blue,
+            InkWell( //toque com animação
+              onTap: (){ //click
+                Navigator.of(context).pop();
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (context) => LoginPage()));
+              },
+              child: Container(
+                margin: EdgeInsets.only(left: 20.0),
+                child: _drawLine(Icons.person, "Login", Theme.of(context).primaryColor, context),
+              ),
             ),
-          ),
-          InkWell( //toque com animação
-            onTap: (){ //click
-              Navigator.of(context).pop();
-              Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => LoginPage()));
-            },
-            child: Container(
-              margin: EdgeInsets.only(left: 20.0),
-              child: _drawLine(Icons.person, "Login", Theme.of(context).primaryColor, context),
+            InkWell( //toque com animação
+              onTap: (){ //click
+                Navigator.of(context).pop();
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (context) => RegUser()));
+              },
+              child: Container(
+                margin: EdgeInsets.only(left: 20.0),
+                child: _drawLine(Icons.lightbulb_outline, "Registrar uma idéia", Theme.of(context).primaryColor, context),
+              ),
             ),
-          ),
-          InkWell( //toque com animação
-            onTap: (){ //click
-              Navigator.of(context).pop();
-              Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => RegUser()));
-            },
-            child: Container(
-              margin: EdgeInsets.only(left: 20.0),
-              child: _drawLine(Icons.lightbulb_outline, "Registrar uma idéia", Theme.of(context).primaryColor, context),
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      )
     );
   }
 }

@@ -1,3 +1,6 @@
+import 'package:bolsa_anjos/classes/user_class.dart';
+import 'package:bolsa_anjos/models/user_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
@@ -8,33 +11,22 @@ class MobAuth = _MobAuth with _$MobAuth;
 
 abstract class _MobAuth with Store {
 
-  FirebaseAuth _auth = FirebaseAuth.instance;
-  FirebaseUser firebaseUser;
-  Map<String, dynamic> userData = Map();
+
 
   @observable
   bool isLoading = false;
+
+  @observable
+  String userMail= "no";
 
   @action
   void setLoading(bool state){
     isLoading = state;
   }
 
-  void signIn(@required String email, String pass, @required VoidCallback onSuccess, @required VoidCallback onFailure) async {
-    setLoading(true);
-
-    _auth.signInWithEmailAndPassword(email: email, password: pass).then((user) async {
-      firebaseUser = user as FirebaseUser;
-
-      //await _loadCurrentUserData();
-
-      onSuccess();
-      isLoading = false;
-    }).catchError((error){
-      onFailure();
-      isLoading = false;
-    });
-
+  @action
+  String setEmail(String email){
+    userMail = email;
   }
 
 

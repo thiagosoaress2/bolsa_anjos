@@ -1,85 +1,132 @@
 import 'package:bolsa_anjos/mobs/mob_auth.dart';
-import 'package:bolsa_anjos/models/user_models.dart';
+import 'package:bolsa_anjos/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class AuthRotines {
 
+  FirebaseAuth _auth;// = FirebaseAuth.instance;
   FirebaseUser firebaseUser;
-  FirebaseAuth auth = FirebaseAuth.instance;
+  //Map<String, dynamic> userData = Map();
 
-  Future<void> addNewUSerToBd(String nome, String email) async {
+  void initAuthRotines(){
+    _auth = FirebaseAuth.instance;
+  }
 
-    DocumentReference refFireStore = await Firestore.instance.collection('users').add({
+  //cadastro
+  Future<void> signUp(@required Map<String, dynamic> userData, @required String password, @required VoidCallback onSuccess, @required VoidCallback onFailure) async {
+    //isLoading = true;
+    //notifyListeners();
+    MobAuth().setLoading(true);
 
-      'name' : nome,
-      'email' : email,
-      'date_join' : DateTime.now().toString(),
+    _auth.createUserWithEmailAndPassword(email: userData["email"], password: password).whenComplete(() async {
 
-    }).then((value) {
+      //firebaseUser = this.firebaseUser;
+      firebaseUser = await _auth.currentUser();
 
-        final CollectionReference collectionReference = Firestore.instance.collection("users");
-        collectionReference.document(value.documentID).updateData({'id' : value.documentID.toString()});
-        /*
-        collectionReference.document(value.documentID).updateData({'id' : value.documentID.toString()}).whenComplete(()
-          async {
+      await _saveUserData(userData);
 
-            //invocar user
-           //_loadUserData();
+      onSuccess();
+      //isLoading = false;
+      //notifyListeners();
+      MobAuth().setLoading(false);
 
-          }
-        ).catchError((e) => (){
-            //erro ocorreu
-          print(e.toString());
-
-        });
-
-         */
-
+    }).catchError((error){
+      print(error.toString());
+      onFailure();
+      //isLoading = false;
+      //notifyListeners();
+      MobAuth().setLoading(false);
     });
+
   }
 
+  //login
+  void signIn(@required String email, String pass, @required VoidCallback onSuccess, @required VoidCallback onFailure) async {
+    MobAuth().setLoading(true);
 
-  Future<bool> isUserLoggedIn () async {
+    _auth.signInWithEmailAndPassword(email: email, password: pass).whenComplete(() async {
 
-    firebaseUser = await AuthRotines().auth.currentUser();
-    if (firebaseUser == null){
-        //user not loggedIn
-      return false;
-    } else {
-      _loadUserData();
-      return true;
+      firebaseUser = await _auth.currentUser();
+      await loadCurrentUserData();
+      onSuccess();
+      MobAuth().setLoading(false);
+
     }
+    ).catchError((error){
+      onFailure();
+      MobAuth().setLoading(false);
+    });
 
   }
 
-  Future<Null> _loadUserData() async {
-    if (firebaseUser == null){
+  //salvar os dados iniciais do user no bd
+  Future<Null> _saveUserData(Map<String, dynamic> userData) async {
+    //this.userData = userData;
+    UserModel().userData = userData;
+    await Firestore.instance.collection("users").document(firebaseUser.uid).setData(userData);
+  }
 
-      firebaseUser = await auth.currentUser();
-      if(firebaseUser != null){
-        if(UserModels().user.name == null){
-          DocumentSnapshot docUser = await Firestore.instance.collection("users").document(AuthRotines().firebaseUser.uid).get();
-          UserModels().user.name = docUser["name"];
-          UserModels().user.isLoggedIn = true;
-          UserModels().user.email = docUser["email"];
-          UserModels().user.hasIdeas = docUser["hasIdeas"];
-          UserModels().user.hasInvestments = docUser["hasInvestments"];
+  //lê as informações do usuário do bd
+  Future<Null> loadCurrentUserData() async {
+    if(firebaseUser == null){  //verifica se tem acesso a informação do user
+      firebaseUser = await _auth.currentUser(); //se for nulo, vai tentaar pegar
+      if (firebaseUser != null){ //verifica novamente
+        if(UserModel().userData["name"] == null){
+          DocumentSnapshot docUser = await Firestore.instance.collection("users").document(firebaseUser.uid).get();
+          UserModel().userData = docUser.data;
+          UserModel().upDateUserEmail(docUser['email']);
+
+          MobAuth().setEmail(UserModel().userData['email']);
         }
       }
     } else {
-      if(UserModels().user.name == "no"){
-        DocumentSnapshot docUser = await Firestore.instance.collection("users").document(AuthRotines().firebaseUser.uid).get();
-        UserModels().user.name = docUser["name"];
-        UserModels().user.isLoggedIn = true;
-        UserModels().user.email = docUser["email"];
-        UserModels().user.hasIdeas = docUser["hasIdeas"];
-        UserModels().user.hasInvestments = docUser["hasInvestments"];
+      if(UserModel().userData["name"] == null){
+        DocumentSnapshot docUser = await Firestore.instance.collection("users").document(firebaseUser.uid).get();
+        UserModel().userData = docUser.data;
+        MobAuth().setEmail(UserModel().userData['email']);
+        UserModel().upDateUserEmail(UserModel().userData['email']);
       }
     }
 
   }
 
+  //envia e-mail de recuperação de senha
+  void recoverPass(@required String email){
+    _auth.sendPasswordResetEmail(email: email);
+  }
 
+   isLoggedIn() async {
+
+    firebaseUser = await _auth.currentUser();
+
+    if (firebaseUser != null){
+      loadCurrentUserData();
+    }
+    //return firebaseUser != null ; //retorna true se firebaseuser for diferente de null
+  }
+
+  void signOut() async{
+
+    await _auth.signOut();
+
+    UserModel().userData = Map();
+    firebaseUser = null;
+
+  }
+
+  String getName(){
+    return UserModel().userData['name'];
+  }
+
+  /*
+  String getEmail(){
+    return userMail;
+  }
+
+   */
+
+  String get getEmail => UserModel().userData['email'];
 
 }
